@@ -53,7 +53,7 @@ module Motor
   end
 
   def company_name
-    ENV['MOTOR_ADMIN_NAME'] || 'Motor Admin'
+    ENV['MOTOR_COMPANY_NAME'] || 'Motor Admin'
   end
 
   def with_public_access?
