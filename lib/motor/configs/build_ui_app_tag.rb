@@ -60,6 +60,7 @@ module Motor
                                    current_ability),
           forms: forms_data_hash(build_cache_key(cache_keys, :forms, current_user, current_ability), current_ability) }
       end
+
       # rubocop:enable Metrics/AbcSize
       # rubocop:enable Metrics/MethodLength
 
@@ -138,15 +139,25 @@ module Motor
       end
 
       def database_names
+        names = []
         if defined?(Motor::EncryptedConfig)
-          Motor::DatabaseClasses.constants.map { |e| e.to_s.titleize }
-        elsif ActiveRecord::Base.configurations.try(:configurations)
-          ActiveRecord::Base.configurations.configurations
-                            .select { |c| c.env_name == Rails.env }
-                            .map { |c| c.try(:name) || c.try(:spec_name) }.compact
-        else
-          ['primary']
+          names << Motor::DatabaseClasses.constants.map { |e| e.to_s.titleize }
+          names = names.flatten
         end
+        if ActiveRecord::Base.configurations.try(:configurations)
+          names << ActiveRecord::Base.configurations.configurations
+                                     .select { |c| c.env_name == Rails.env }
+                                     .map { |c| c.try(:name) || c.try(:spec_name) }.compact
+        end
+        names = names.flatten.map { |i| i.downcase }.uniq
+        if names.empty?
+          names = names << 'primary'
+        elsif (names.include? 'default') && (names.include? 'primary')
+          names = names - ['default'] #remove default if primary
+        elsif (!names.include? 'default') && !(names.include? 'primary')
+          names = names << 'default' #add default if none of them
+        end
+        names
       end
 
       def queries_data_hash(cache_key = nil, current_ability = nil)
