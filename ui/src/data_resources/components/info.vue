@@ -301,6 +301,8 @@ export default {
       this.assignBreadcrumbLabel()
 
       this.$emit('update', data)
+
+      this.$setToStore(this.resourceName, this.resourceId, data)
     },
     assignBreadcrumbLabel () {
       const labelParts = this.model.display_primary_key ? [`${this.resourceId.toString().match(/^\d+$/) ? '#' : ''}${this.resourceId}`] : []

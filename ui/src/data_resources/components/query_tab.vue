@@ -80,7 +80,8 @@ export default {
       data: [],
       columns: [],
       iframeSrc: '',
-      query: {}
+      query: {},
+      resource: {}
     }
   },
   computed: {
@@ -98,18 +99,24 @@ export default {
       }
     },
     variablesToRender () {
-      return (this.query.preferences.variables || []).filter((variable) => !this.variables[variable.name])
+      return (this.query.preferences.variables || []).filter((variable) => !this.variables[variable.name] && !this.resource[variable.name])
     },
     showVariablesForm () {
       return !!this.variablesToRender.length
     }
   },
   mounted () {
+    const resourceVariableId = Object.keys(this.variables).find((element) => element.includes('_id'))
+    const resourceName = resourceVariableId ? resourceVariableId.split('_id')[0] : null
+    if (resourceName && this.variables[resourceName + '_id']) {
+      this.resource = this.$getFromStore(resourceName, this.variables[resourceName + '_id'])
+    }
+
     this.loadQuery().then(() => {
       if (this.isIframe) {
         const [apiPath, queryParams] = interpolateForQueryParams(this.query.preferences.api_path, {
-            ...this.dataVariables,
-            ...this.variables
+          ...this.dataVariables,
+          ...this.variables
         })
 
         console.log(this.query.preferences.api_path, this.variables)
@@ -134,14 +141,13 @@ export default {
     },
     assignDataVariables () {
       this.dataVariables = (this.query.preferences.variables || []).reduce((acc, variable) => {
-        acc[variable.name] = variable.default_value
+        acc[variable.name] = this.resource[variable.name] ?? variable.default_value
 
         return acc
       }, {})
     },
     runQuery () {
       this.isLoading = true
-
       return api.get(`run_queries/${this.queryId}`, {
         params: {
           variables: {
