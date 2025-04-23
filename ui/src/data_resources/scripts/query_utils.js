@@ -1,4 +1,5 @@
-import { modelNameMap } from '../scripts/schema'
+import { modelNameMap, store } from './schema'
+import api from '../../api'
 
 function selectReadableColumns (model, accessTypes = ['read_only', 'read_write']) {
   return model.columns.map((column) => {
@@ -6,6 +7,13 @@ function selectReadableColumns (model, accessTypes = ['read_only', 'read_write']
       ? column.name
       : null
   }).filter(Boolean).join(',')
+}
+
+function queryParams (model, accessTypes = ['read_only', 'read_write']) {
+  return {
+    fields: fieldsParams(model),
+    params: includeParams(model)
+  }
 }
 
 function includeParams (model, accessTypes = ['read_only', 'read_write']) {
@@ -42,4 +50,37 @@ function fieldsParams (model, accessTypes = ['read_only', 'read_write']) {
   return fields
 }
 
-export { includeParams, fieldsParams }
+function getWithStore (model, id, refesh = false) {
+  const value = !refesh && store[model.name] && store[model.name][id] ? store[model.name][id] : null
+  if (!value) {
+    const params = queryParams(model)
+    return api.get(`data/${model.slug}/${id}`, { params: params })
+      .then((result) => {
+        store[model.name] = store[model.name] ?? {}
+        store[model.name][id] = store[model.name][id] ?? {}
+        store[model.name][id] = result.data.data
+        return store[model.name][id]
+      })
+      .catch((error) => {
+        if (error.response?.status === 404) {
+          this.notFound = true
+        } else {
+          console.error(error)
+
+          if (error.response?.status === 403) {
+            this.notFound = true
+          }
+
+          if (error.response?.data?.errors) {
+            this.$Message.error(error.response.data.errors.join('\n'))
+          } else {
+            this.$Message.error(error.message)
+          }
+        }
+      })
+  } else {
+    return Promise.resolve(value)
+  }
+}
+
+export { includeParams, fieldsParams, getWithStore }

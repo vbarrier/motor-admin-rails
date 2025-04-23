@@ -65,17 +65,6 @@ if (i18nDict.i) {
 }
 
 const app = createApp(App)
-app.config.globalProperties.store = {}
-app.config.globalProperties.$setToStore = function (resourceName, resourceId, data) {
-  const store = app.config.globalProperties.store
-  store[resourceName] = store[resourceName] ?? {}
-  store[resourceName][resourceId] = store[resourceName][resourceId] ?? {}
-  store[resourceName][resourceId] = data
-}
-app.config.globalProperties.$getFromStore = function (resourceName, resourceId) {
-  const store = app.config.globalProperties.store
-  return store[resourceName] && store[resourceName][resourceId] ? store[resourceName][resourceId] : {}
-}
 app.config.globalProperties.i18n = i18nDict
 app.config.globalProperties.$log = console.log
 

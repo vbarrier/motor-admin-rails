@@ -53,6 +53,8 @@ import QueryResult from 'queries/components/result'
 import { interpolateForQueryParams } from 'utils/scripts/string'
 import VariablesForm from 'queries/components/variables_form'
 import api from 'api'
+import { modelNameMap } from '../scripts/schema'
+import { getWithStore } from '../scripts/query_utils'
 
 export default {
   name: 'QueryTab',
@@ -109,27 +111,27 @@ export default {
     const resourceVariableId = Object.keys(this.variables).find((element) => element.includes('_id'))
     const resourceName = resourceVariableId ? resourceVariableId.split('_id')[0] : null
     if (resourceName && this.variables[resourceName + '_id']) {
-      this.resource = this.$getFromStore(resourceName, this.variables[resourceName + '_id'])
-    }
+      getWithStore(modelNameMap[resourceName], this.variables[resourceName + '_id']).then(data => {
+        this.resource = data
+        this.loadQuery().then(() => {
+          if (this.isIframe) {
+            const [apiPath, queryParams] = interpolateForQueryParams(this.query.preferences.api_path, {
+              ...this.dataVariables,
+              ...this.variables
+            })
 
-    this.loadQuery().then(() => {
-      if (this.isIframe) {
-        const [apiPath, queryParams] = interpolateForQueryParams(this.query.preferences.api_path, {
-          ...this.dataVariables,
-          ...this.variables
+            console.log(this.query.preferences.api_path, this.variables)
+            this.iframeSrc = `${apiPath}?${new URLSearchParams(queryParams).toString()}`
+          } else {
+            this.runQuery()
+          }
         })
-
-        console.log(this.query.preferences.api_path, this.variables)
-        this.iframeSrc = `${apiPath}?${new URLSearchParams(queryParams).toString()}`
-      } else {
-        this.runQuery()
-      }
-    })
+      })
+    }
   },
   methods: {
     loadQuery () {
-      return api.get(`queries/${this.queryId}`, {
-      }).then((result) => {
+      return api.get(`queries/${this.queryId}`, {}).then((result) => {
         this.query = result.data.data
 
         this.assignDataVariables()

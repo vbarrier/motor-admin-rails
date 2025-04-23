@@ -147,15 +147,14 @@
 </template>
 
 <script>
-import api from 'api'
-import { modelNameMap } from '../scripts/schema'
+import { modelNameMap, modelSlugMap } from '../scripts/schema'
 import singularize from 'inflected/src/singularize'
 
 import InfoCell from './info_cell'
 import ResourceActions from './actions'
 
 import { assignBreadcrumbLabel } from 'navigation/scripts/breadcrumb_store'
-import { includeParams, fieldsParams } from '../scripts/query_utils'
+import { getWithStore } from '../scripts/query_utils'
 import { widthLessThan } from 'utils/scripts/dimensions'
 
 import { isShowSettings } from 'settings/scripts/toggle'
@@ -233,23 +232,6 @@ export default {
           (this.model.display_primary_key || column.name !== this.displayColumn.name) &&
           ['read_only', 'read_write'].includes(column.access_type)
       })
-    },
-    includeParams () {
-      return includeParams(this.model)
-    },
-    fieldsParams () {
-      return fieldsParams(this.model)
-    },
-    queryParams () {
-      const params = {
-        fields: this.fieldsParams
-      }
-
-      if (this.includeParams) {
-        params.include = this.includeParams
-      }
-
-      return params
     }
   },
   watch: {
@@ -301,8 +283,6 @@ export default {
       this.assignBreadcrumbLabel()
 
       this.$emit('update', data)
-
-      this.$setToStore(this.resourceName, this.resourceId, data)
     },
     assignBreadcrumbLabel () {
       const labelParts = this.model.display_primary_key ? [`${this.resourceId.toString().match(/^\d+$/) ? '#' : ''}${this.resourceId}`] : []
@@ -315,27 +295,10 @@ export default {
     },
     loadData () {
       this.isReloading = true
+      return getWithStore(modelSlugMap[this.model.slug], this.resourceId, true).then((result) => {
+        this.assignResource(result)
+      }).catch(() => {
 
-      return api.get(`data/${this.model.slug}/${this.resourceId}`, {
-        params: this.queryParams
-      }).then((result) => {
-        this.assignResource(result.data.data)
-      }).catch((error) => {
-        if (error.response?.status === 404) {
-          this.notFound = true
-        } else {
-          console.error(error)
-
-          if (error.response?.status === 403) {
-            this.notFound = true
-          }
-
-          if (error.response?.data?.errors) {
-            this.$Message.error(error.response.data.errors.join('\n'))
-          } else {
-            this.$Message.error(error.message)
-          }
-        }
       }).finally(() => {
         this.isLoading = false
         this.isReloading = false
@@ -349,12 +312,12 @@ export default {
 @import 'src/utils/styles/variables';
 
 .pinned-resource-title {
-  position: sticky;
-  top: 0;
-  margin: 0 -16px;
-  padding: 0 16px;
-  background: #fff;
-  z-index: 1;
-  border-bottom: 1px solid $border-color-base;
+    position: sticky;
+    top: 0;
+    margin: 0 -16px;
+    padding: 0 16px;
+    background: #fff;
+    z-index: 1;
+    border-bottom: 1px solid $border-color-base;
 }
 </style>
